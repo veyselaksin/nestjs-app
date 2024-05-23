@@ -1,24 +1,92 @@
-import { Test, TestingModule } from '@nestjs/testing';
-import { INestApplication } from '@nestjs/common';
-import * as request from 'supertest';
-import { AppModule } from './../src/app.module';
+import { Test } from '@nestjs/testing'
+import { AppModule } from '../src/app.module'
+import { INestApplication } from '@nestjs/common'
+import { ValidationPipe } from '@nestjs/common'
+import { PrismaService } from '../src/prisma/prisma.service'
+import * as pactum from 'pactum'
+import { first } from 'rxjs'
 
-describe('AppController (e2e)', () => {
-  let app: INestApplication;
+describe('App e2e test', () => {
+    let app: INestApplication
+    let prismaService: PrismaService
+    beforeAll(async () => {
+        const moduleRef = await Test.createTestingModule({
+            imports: [AppModule]
+        }).compile()
 
-  beforeEach(async () => {
-    const moduleFixture: TestingModule = await Test.createTestingModule({
-      imports: [AppModule],
-    }).compile();
+        app = moduleRef.createNestApplication()
+        app.useGlobalPipes(
+            new ValidationPipe({
+                whitelist: true,
+                forbidNonWhitelisted: true,
+                transform: true
+            })
+        )
 
-    app = moduleFixture.createNestApplication();
-    await app.init();
-  });
+        await app.init()
+        await app.listen(3001)
 
-  it('/ (GET)', () => {
-    return request(app.getHttpServer())
-      .get('/')
-      .expect(200)
-      .expect('Hello World!');
-  });
-});
+        prismaService = moduleRef.get<PrismaService>(PrismaService)
+        await prismaService.cleanDB()
+    })
+
+    afterAll(async () => {
+        await app.close()
+    })
+
+    describe('Auth', () => {
+        describe('Register', () => {
+            it('should register a new user', async () => {
+                await pactum
+                    .spec()
+                    .post('http://localhost:3001/auth/register')
+                    .withBody({
+                        email: 'veysel.aksin@test.com',
+                        password: 'password',
+                        firstName: 'Veysel',
+                        lastName: 'Aksin'
+                    })
+                    .expectStatus(201)
+                    .inspect()
+            })
+
+            it('should not register a user with the same email', async () => {
+                await pactum
+                    .spec()
+                    .post('http://localhost:3001/auth/register')
+                    .withBody({
+                        email: 'veysel.aksin@test.com',
+                        password: 'password',
+                        firstName: 'Veysel',
+                        lastName: 'Aksin'
+                    })
+                    .expectStatus(409)
+            })
+
+            it('should not register a user with an invalid email', async () => {
+                await pactum
+                    .spec()
+                    .post('http://localhost:3001/auth/register')
+                    .withBody({
+                        email: 'veysel.aksin',
+                        password: 'password',
+                        firstName: 'Veysel',
+                        lastName: 'Aksin'
+                    })
+                    .expectStatus(400)
+            })
+        })
+
+        describe('Login', () => {
+            it.todo('should login a user')
+        })
+    })
+
+    describe('User', () => {
+        describe('User Profile', () => {
+            it.todo('should get the user')
+        })
+    })
+
+    it.todo('should pass the e2e test')
+})
