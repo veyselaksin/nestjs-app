@@ -78,14 +78,35 @@ describe('App e2e test', () => {
         })
 
         describe('Login', () => {
-            it.todo('should login a user')
+            it('should login the user', async () => {
+                await pactum
+                    .spec()
+                    .post('http://localhost:3001/auth/login')
+                    .withBody({
+                        email: 'veysel.aksin@test.com',
+                        password: 'password'
+                    })
+                    .expectStatus(200)
+                    .stores('access_token', 'body.access_token')
+                    .inspect()
+            })
         })
-    })
 
-    describe('User', () => {
-        describe('User Profile', () => {
-            it.todo('should get the user')
-        })
+        // describe('User', () => {
+        //     console.log('access_token $S{access_token}')
+        //     describe('User Profile', () => {
+        //         it('should get the user profile', async () => {
+        //             await pactum
+        //                 .spec()
+        //                 .get('http://localhost:3001/user/profile')
+        //                 .withHeaders({
+        //                     Authorization: 'Bearer $S{access_token}'
+        //                 })
+        //                 .expectStatus(200)
+        //                 .inspect()
+        //         })
+        //     })
+        // })
     })
 
     it.todo('should pass the e2e test')
